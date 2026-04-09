@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+dist/
+build/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Logs
+*.log
+worker_logs.txt
+ps.txt
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
