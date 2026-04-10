@@ -9,6 +9,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { WebSocketServer } = require('ws');
 const pino = require('pino');
+const path = require('path');
 
 const db = require('./services/database');
 const redisClient = require('./services/redis');
@@ -32,6 +33,9 @@ app.use(compression());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 app.use(morgan('combined'));
+
+// Serve static dashboard files
+app.use(express.static(path.join(__dirname, '../../dashboard')));
 
 // Rate limiting
 app.use('/api/', rateLimit({
@@ -73,12 +77,7 @@ app.get('/health', async (_req, res) => {
 });
 
 app.get('/', (_req, res) => {
-  res.json({
-    name: 'Distributed Job Queue API',
-    version: '1.0.0',
-    docs: '/api/docs',
-    health: '/health',
-  });
+  res.sendFile(path.join(__dirname, '../../dashboard/index.html'));
 });
 
 // ─── WebSocket for real-time updates ─────────────────────────
