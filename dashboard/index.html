@@ -618,10 +618,13 @@ const PAGE_SIZE = 20;
 function switchTab(name, e) {
   document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('tab-' + name).classList.add('active');
   
-  if (e && e.target) {
-    e.target.classList.add('active');
+  const targetPane = document.getElementById('tab-' + name);
+  if (targetPane) targetPane.classList.add('active');
+  
+  // Use currentTarget to ensure the button itself gets the class
+  if (e && e.currentTarget) {
+    e.currentTarget.classList.add('active');
   } else {
     // Fallback if called programmatically
     const btn = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.innerText.toLowerCase().includes(name));
