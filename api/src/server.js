@@ -74,8 +74,14 @@ app.use('/api/stats', statsRoutes);
 app.use('/api/dead-letter', deadLetterRoutes);
 app.use('/api/maintenance', maintenanceRoutes);
 
-// Health check
+// ─── Health & Boot ──────────────────────────────────────────
+const port = process.env.PORT || 3000;
+let isReady = false;
+
 app.get('/health', async (_req, res) => {
+  if (!isReady) {
+    return res.status(503).json({ status: 'starting', message: 'Initializing background services...' });
+  }
   try {
     await db.query('SELECT 1');
     await redisClient.ping();
@@ -93,16 +99,15 @@ app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, '../../dashboard/index.html'));
 });
 
-// ─── WebSocket for real-time updates ─────────────────────────
-const wss = new WebSocketServer({ server, path: '/ws' });
-const { subscribeToRedis } = setupWebSocket(wss, redisClient, logger);
+// Start listening IMMEDIATELY to satisfy Render's port scan
+server.listen(port, '0.0.0.0', () => {
+  logger.info({ port, host: '0.0.0.0' }, 'API server listening (Immediate Boot)');
+});
 
-// ─── Error Handler ───────────────────────────────────────────
-app.use(errorHandler);
-
-// ─── Boot ────────────────────────────────────────────────────
 async function start() {
   try {
+    logger.info('Initializing background services...');
+    
     await db.connect();
     logger.info('PostgreSQL connected');
 
@@ -113,23 +118,30 @@ async function start() {
     await rabbitMQ.connect();
     logger.info('RabbitMQ connected');
 
-    const port = process.env.PORT || 3000;
-    server.listen(port, '0.0.0.0', () => {
-      logger.info({ port, host: '0.0.0.0' }, 'API server listening and ready for traffic');
-    });
+    isReady = true;
+    logger.info('All services connected - System Ready');
   } catch (err) {
-    logger.error({ err }, 'Failed to start API server');
-    process.exit(1);
+    logger.error({ err }, 'Failed to initialize background services');
+    // We don't exit here so the app keeps listening and we can debug via /health
   }
 }
+
+// ─── WebSocket for real-time updates ─────────────────────────
+const wss = new WebSocketServer({ server, path: '/ws' });
+const { subscribeToRedis } = setupWebSocket(wss, redisClient, logger);
+
+// ─── Error Handler ───────────────────────────────────────────
+app.use(errorHandler);
 
 // Graceful shutdown
 async function shutdown(signal) {
   logger.info({ signal }, 'Shutting down...');
   server.close(async () => {
-    await rabbitMQ.close();
-    await redisClient.quit();
-    await db.end();
+    try {
+      if (rabbitMQ.isConnected()) await rabbitMQ.close();
+      await redisClient.quit();
+      await db.end();
+    } catch (e) {}
     process.exit(0);
   });
   setTimeout(() => process.exit(1), 10000);
