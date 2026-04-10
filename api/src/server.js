@@ -21,6 +21,7 @@ const statsRoutes = require('./routes/stats');
 const deadLetterRoutes = require('./routes/deadletter');
 const { errorHandler } = require('./middleware/errorHandler');
 const { setupWebSocket } = require('./services/websocket');
+const maintenanceRoutes = require('./routes/maintenance');
 
 const logger = pino({ level: process.env.LOG_LEVEL || 'info' });
 const app = express();
@@ -71,6 +72,7 @@ app.use('/api/queues', queueRoutes);
 app.use('/api/workers', workerRoutes);
 app.use('/api/stats', statsRoutes);
 app.use('/api/dead-letter', deadLetterRoutes);
+app.use('/api/maintenance', maintenanceRoutes);
 
 // Health check
 app.get('/health', async (_req, res) => {
