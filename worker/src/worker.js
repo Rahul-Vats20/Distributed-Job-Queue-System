@@ -56,13 +56,14 @@ async function setupTopology(ch) {
 }
 
 async function connectAll() {
-  db = new Pool({ connectionString: process.env.DATABASE_URL, max: 10 });
+  db = new Pool({ connectionString: process.env.DATABASE_URL, max: 5 }); // Keep pool small for free tier
   redis = new Redis(process.env.REDIS_URL, { lazyConnect: true, retryStrategy: (t) => Math.min(t * 200, 5000) });
   await redis.connect();
 
   mqConn = await amqp.connect(process.env.RABBITMQ_URL);
   mqChannel = await mqConn.createChannel();
-  await mqChannel.prefetch(CONCURRENCY);
+  // IMPORTANT: global: true makes the prefetch limit apply to the whole channel (all queues)
+  await mqChannel.prefetch(CONCURRENCY, true);
 
   // Assert all exchanges and queues before consuming
   await setupTopology(mqChannel);
