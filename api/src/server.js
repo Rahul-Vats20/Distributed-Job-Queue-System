@@ -114,8 +114,8 @@ async function start() {
     logger.info('RabbitMQ connected');
 
     const port = process.env.PORT || 3000;
-    server.listen(port, () => {
-      logger.info({ port }, 'API server listening');
+    server.listen(port, '0.0.0.0', () => {
+      logger.info({ port, host: '0.0.0.0' }, 'API server listening and ready for traffic');
     });
   } catch (err) {
     logger.error({ err }, 'Failed to start API server');
