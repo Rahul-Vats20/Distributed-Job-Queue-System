@@ -98,6 +98,9 @@ const workersRouter = require('express').Router();
 workersRouter.get('/', async (req, res, next) => {
   try {
     // Get worker heartbeats from Redis
+    if (!req.redis?.client) {
+      return res.json({ workers: [], stats: [], error: 'Redis not connected' });
+    }
     const keys = await req.redis.client.keys('worker:heartbeat:*');
     const workers = [];
 
